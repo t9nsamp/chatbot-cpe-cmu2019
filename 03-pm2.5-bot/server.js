@@ -1,76 +1,85 @@
-const express = require('express')
-const line = require('@line/bot-sdk')
-const restClient = new (require('node-rest-client').Client)
+  const express = require('express')
+  const line = require('@line/bot-sdk')
+  const restClient = new (require('node-rest-client').Client)
 
-require('dotenv').config()
-const app = express()
 
-const config = {
-  channelAccessToken: process.env.channelAccessToken,
-  channelSecret: process.env.channelSecret
-};
+  require('dotenv').config()
+  const app = express()
 
-const client = new line.Client(config);
+  const config = {
+    channelAccessToken: process.env.channelAccessToken,
+    channelSecret: process.env.channelSecret
+  };
 
-app.get('/', function (req, res) {
-	res.send('03-pm2.5-bot')
-})
+  const client = new line.Client(config);
 
-app.post('/webhook', line.middleware(config), (req, res) => {
-  Promise
-    .all(req.body.events.map(handleEvent))
-    .then((result) => res.json(result))
-    .catch(err => console.log('err', err))
-});
-
-function handleEvent(event) {
-  if(event.type === 'message' && event.message.type === 'location') {
-    return handleLocationEvent(event)
-  }else {
-    return Promise.resolve(null)
-  }
-}
-
-function handleLocationEvent(event) {
-  return new Promise((resolve, reject) => {
-    restClient.get(`${process.env.apiUrl}?lat=${event.message.latitude}&long=${event.message.longitude}`, (data, response) => {
-      if (data) {
-        const pinData = data.map(row => ({
-          "thumbnailImageUrl": row.aqi.icon,
-          "imageBackgroundColor": "#FFFFFF",
-          "title": `PM 2.5: ${row.aqi.aqi}`,
-          "text": `${row.nameTH}, ${row.areaTH}`,
-          "actions": [
-            {
-              "type": "uri",
-              "label": "ข้อมูลย้อนหลัง",
-              "uri": row.historyUrl
-            }
-          ]
-        }))
-    
-        var msg = {
-          "type": "template",
-          "altText": "ข้อมูลสถานที่",
-          "template": {
-            "type": "carousel",
-            "columns": pinData,
-            "imageAspectRatio": "rectangle",
-            "imageSize": "cover"
-          }
-        }
-
-        resolve(client.replyMessage(event.replyToken, msg))
-      } else {
-        reject()
-      }
-    })
+  app.get('/', function (req, res) {
+    res.send('03-pm2.5-bot')
   })
- 
-}
 
-app.set('port', (process.env.PORT || 4000))
+  app.post('/webhook', line.middleware(config), (req, res) => {
+    Promise
+      .all(req.body.events.map(handleEvent))
+      .then((result) => res.json(result))
+      .catch(err => console.log('err', err))
+  });
 
-app.listen(app.get('port'), function () {
-  console.log('run at port', app.get('port'))
-})
+  function handleEvent(event) {
+    if(event.type === 'message' && event.message.type === 'location') {
+      return handleLocationEvent(event)
+    }else {
+      return Promise.resolve(null)
+    }
+  }
+
+  function handleLocationEvent(event) {
+    return new Promise((resolve, reject) => {
+
+      //https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=13.8575872,100.5617152&rankby=distance&keyword=pea&key=AIzaSyAagc52SCi1ns7CggOovTSBMTd8YTXRlRU
+
+      //apiUrl : https://maps.googleapis.com/maps/api/place/nearbysearch/json
+
+      //restClient.get(`${process.env.apiUrl}?location=${event.message.latitude},${event.message.longitude}&rankby=distance&keyword=UOB@&key=AIzaSyAagc52SCi1ns7CggOovTSBMTd8YTXRlRU`, (data, response) => {
+
+      restClient.get(`${process.env.apiUrl}?lat=${event.message.latitude}&long=${event.message.longitude}`, (data, response) => {
+          if (data) {
+            //const pinData = data.results.map(row => ({
+              const pinData = data.map(row => ({
+                "thumbnailImageUrl": row.aqi.icon,
+                "imageBackgroundColor": "#FFFFFF",
+                "title": `PM 2.5: ${row.aqi.aqi}`,
+                "text": `${row.nameTH}, ${row.areaTH}`,
+                "actions": [
+                  {
+                    "type": "uri",
+                    "label": "ข้อมูลย้อนหลัง",
+                    "uri": row.historyUrl
+                  }
+                ]
+              }))
+          
+              var msg = {
+                "type": "template",
+                "altText": "ข้อมูลสถานที่",
+                "template": {
+                  "type": "carousel",
+                  "columns": pinData[0],
+                  "imageAspectRatio": "rectangle",
+                  "imageSize": "cover"
+                }
+              }
+      
+              resolve(client.replyMessage(event.replyToken, msg))
+            } else {
+              reject()
+            }
+          })
+        })
+      
+      }
+      
+      app.set('port', (process.env.PORT || 4000))
+      
+      app.listen(app.get('port'), function () {
+        console.log('run at port', app.get('port'))
+      })
