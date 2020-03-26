@@ -2,6 +2,7 @@ const express = require('express')
 const line = require('@line/bot-sdk')
 const restClient = new (require('node-rest-client').Client)
 
+
 require('dotenv').config()
 const app = express()
 
@@ -33,41 +34,57 @@ function handleEvent(event) {
 
 function handleLocationEvent(event) {
   return new Promise((resolve, reject) => {
-    restClient.get(`${process.env.apiUrl}?lat=${event.message.latitude}&long=${event.message.longitude}`, (data, response) => {
-      if (data) {
-        const pinData = data.map(row => ({
-          "thumbnailImageUrl": row.aqi.icon,
-          "imageBackgroundColor": "#FFFFFF",
-          "title": `PM 2.5: ${row.aqi.aqi}`,
-          "text": `${row.nameTH}, ${row.areaTH}`,
-          "actions": [
-            {
-              "type": "uri",
-              "label": "ข้อมูลย้อนหลัง",
-              "uri": row.historyUrl
-            }
-          ]
-        }))
-    
-        var msg = {
-          "type": "template",
-          "altText": "ข้อมูลสถานที่",
-          "template": {
-            "type": "carousel",
-            "columns": pinData,
-            "imageAspectRatio": "rectangle",
-            "imageSize": "cover"
-          }
-        }
 
-        resolve(client.replyMessage(event.replyToken, msg))
-      } else {
-        reject()
-      }
-    })
+    //https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=13.8575872,100.5617152&rankby=distance&keyword=hospital&key=AIzaSyAagc52SCi1ns7CggOovTSBMTd8YTXRlRU
+
+    //apiUrl : https://maps.googleapis.com/maps/api/place/nearbysearch/json
+
+    restClient.get(`${process.env.apiUrl}?lat=${event.message.latitude}&long=${event.message.longitude}`, (data, response) => {
+        if (data) {
+          const pinData = data.map(row => ({
+            "text": `${row.nameTH}, ${row.areaTH}`,
+           /* "thumbnailImageUrl": row.aqi.icon,
+            "imageBackgroundColor": "#FFFFFF",
+            "title": `PM 2.5: ${row.aqi.aqi}`,
+            "text": `${row.nameTH}, ${row.areaTH}`,
+            "actions": [
+              {
+                "type": "uri",
+                "label": "ข้อมูลย้อนหลัง",
+                "uri": row.historyUrl
+              }
+            ]*/
+          }))
+
+        /*
+          var msg = {
+            "type": "template",
+            "altText": "ข้อมูลสถานที่",
+            "template": {
+              "type": "carousel",
+              "columns": pinData,
+              "imageAspectRatio": "rectangle",
+              "imageSize": "cover"
+            }
+          }*/
+
+          var msg = {
+
+            "type": "text",
+            pinData
+
+            }
+  
+          resolve(client.replyMessage(event.replyToken, msg))
+        } else {
+          reject()
+        }
+      })
+
   })
  
 }
+
 
 app.set('port', (process.env.PORT || 4000))
 
